@@ -1,0 +1,15 @@
+{
+  "hostname": "{{ ansible_hostname }}",
+  "os": "{{ ansible_distribution }} {{ ansible_distribution_version }}",
+  "os_family": "{{ ansible_os_family }}",
+  "cis_level": {{ cis_level | default(1) }},
+  "scan_date": "{{ ansible_date_time.iso8601 }}",
+  "skipped_rules": {{ cis_skip_rules | default([]) | to_json }},
+  "checks": {
+    "ssh_root_login": "{{ 'PASS' if check_root_login is defined and check_root_login is not failed else 'FAIL' }}",
+    "ssh_password_auth": "{{ 'PASS' if check_password_auth is defined and check_password_auth is not failed else 'FAIL' }}",
+    "ip_forwarding": "{{ 'PASS' if check_ip_forward_result is defined and check_ip_forward_result is not failed else 'FAIL' }}",
+    "auditd_running": "{{ 'PASS' if check_auditd is defined and check_auditd is not failed else 'FAIL' }}",
+    "firewall_active": "{{ 'PASS' if (check_firewalld is defined and check_firewalld is not failed) or (check_ufw is defined and check_ufw.stdout is defined and 'active' in check_ufw.stdout | default('')) else 'FAIL' }}"
+  }
+}

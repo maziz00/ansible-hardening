@@ -1,0 +1,5 @@
+---
+cis_level: 1
+cis_skip_rules: []
+cis_ntp_service_redhat: chronyd
+cis_ntp_service_debian: chrony

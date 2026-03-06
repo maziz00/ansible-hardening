@@ -1,0 +1,4 @@
+---
+cis_skip_rules: []
+cis_auditd_package_redhat: audit
+cis_auditd_package_debian: auditd

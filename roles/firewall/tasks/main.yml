@@ -1,0 +1,91 @@
+---
+# ─────────────────────────────────────────────────────
+# Role: firewall
+# CIS Controls: 3.5.x — firewalld (RedHat) / ufw (Ubuntu/Debian)
+# ─────────────────────────────────────────────────────
+
+# ── REDHAT: firewalld ────────────────────────────────
+
+- name: "3.5.1 | Install firewalld (RedHat)"
+  ansible.builtin.dnf:
+    name: firewalld
+    state: present
+  when:
+    - ansible_os_family == 'RedHat'
+    - "'3.5.1' not in cis_skip_rules"
+
+- name: "3.5.1 | Enable firewalld (RedHat)"
+  ansible.builtin.service:
+    name: firewalld
+    state: started
+    enabled: true
+  when:
+    - ansible_os_family == 'RedHat'
+    - "'3.5.1' not in cis_skip_rules"
+
+- name: "3.5.2 | Set default zone to {{ cis_firewall_default_zone }} (RedHat)"
+  ansible.posix.firewalld:
+    zone: "{{ cis_firewall_default_zone }}"
+    permanent: true
+    state: enabled
+  notify: reload firewalld
+  when:
+    - ansible_os_family == 'RedHat'
+    - "'3.5.2' not in cis_skip_rules"
+  failed_when: false
+
+- name: "3.5.3 | Allow required services (RedHat)"
+  ansible.posix.firewalld:
+    service: "{{ item }}"
+    permanent: true
+    state: enabled
+    zone: "{{ cis_firewall_default_zone }}"
+  loop: "{{ cis_firewall_allowed_services }}"
+  notify: reload firewalld
+  when:
+    - ansible_os_family == 'RedHat'
+    - "'3.5.3' not in cis_skip_rules"
+
+# ── DEBIAN/UBUNTU: ufw ──────────────────────────────
+
+- name: "3.5.1 | Install UFW (Debian/Ubuntu)"
+  ansible.builtin.apt:
+    name: ufw
+    state: present
+    update_cache: true
+  when:
+    - ansible_os_family == 'Debian'
+    - "'3.5.1' not in cis_skip_rules"
+
+- name: "3.5.2 | Set UFW default incoming policy to {{ cis_ufw_default_incoming }}"
+  community.general.ufw:
+    direction: incoming
+    default: "{{ cis_ufw_default_incoming }}"
+  when:
+    - ansible_os_family == 'Debian'
+    - "'3.5.2' not in cis_skip_rules"
+
+- name: "3.5.2 | Set UFW default outgoing policy to {{ cis_ufw_default_outgoing }}"
+  community.general.ufw:
+    direction: outgoing
+    default: "{{ cis_ufw_default_outgoing }}"
+  when:
+    - ansible_os_family == 'Debian'
+    - "'3.5.2' not in cis_skip_rules"
+
+- name: "3.5.3 | Allow required ports (Debian/Ubuntu)"
+  community.general.ufw:
+    rule: allow
+    port: "{{ item.port }}"
+    proto: "{{ item.proto }}"
+  loop: "{{ cis_ufw_allowed_ports }}"
+  when:
+    - ansible_os_family == 'Debian'
+    - "'3.5.3' not in cis_skip_rules"
+
+- name: "3.5.1 | Enable UFW (Debian/Ubuntu)"
+  community.general.ufw:
+    state: enabled
+  when:
+    - ansible_os_family == 'Debian'
+    - "'3.5.1' not in cis_skip_rules"

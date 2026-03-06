@@ -1,0 +1,164 @@
+---
+# ─────────────────────────────────────────────────────
+# Role: filesystem
+# CIS Controls: 1.1.x — Mount options, kernel modules, file permissions
+# Supports: RHEL, CentOS, Rocky, Ubuntu, Debian
+# ─────────────────────────────────────────────────────
+
+# ── DISABLE UNUSED FILESYSTEMS ───────────────────────
+
+- name: "1.1.1 | Disable cramfs"
+  ansible.builtin.lineinfile:
+    path: /etc/modprobe.d/cis-hardening.conf
+    line: "install cramfs /bin/true"
+    create: true
+    mode: "0644"
+  when:
+    - cis_disable_cramfs
+    - "'1.1.1' not in cis_skip_rules"
+
+- name: "1.1.1 | Disable squashfs"
+  ansible.builtin.lineinfile:
+    path: /etc/modprobe.d/cis-hardening.conf
+    line: "install squashfs /bin/true"
+    create: true
+    mode: "0644"
+  when:
+    - cis_disable_squashfs
+    - "'1.1.1' not in cis_skip_rules"
+
+- name: "1.1.24 | Disable USB storage"
+  ansible.builtin.lineinfile:
+    path: /etc/modprobe.d/cis-hardening.conf
+    line: "install usb-storage /bin/true"
+    create: true
+    mode: "0644"
+  when:
+    - cis_disable_usb_storage
+    - "'1.1.24' not in cis_skip_rules"
+
+# ── /tmp MOUNT OPTIONS ──────────────────────────────
+
+- name: "1.1.2 | Check if /tmp is a separate partition"
+  ansible.builtin.shell: mount | grep ' /tmp '
+  register: tmp_mount
+  changed_when: false
+  failed_when: false
+
+- name: "1.1.3 | Set /tmp mount options"
+  ansible.posix.mount:
+    path: /tmp
+    src: tmpfs
+    fstype: tmpfs
+    opts: "defaults,{{ cis_tmp_mount_options }},size=2G"
+    state: mounted
+  when:
+    - "'1.1.3' not in cis_skip_rules"
+    - "'1.1.10' not in cis_skip_rules"
+
+# ── /dev/shm MOUNT OPTIONS ──────────────────────────
+
+- name: "1.1.7 | Set /dev/shm mount options"
+  ansible.posix.mount:
+    path: /dev/shm
+    src: tmpfs
+    fstype: tmpfs
+    opts: "defaults,{{ cis_dev_shm_mount_options }}"
+    state: mounted
+  when: "'1.1.7' not in cis_skip_rules"
+
+# ── FILE PERMISSIONS ─────────────────────────────────
+
+- name: "6.1.2 | Set permissions on /etc/passwd"
+  ansible.builtin.file:
+    path: /etc/passwd
+    owner: root
+    group: root
+    mode: "0644"
+  when: "'6.1.2' not in cis_skip_rules"
+
+- name: "6.1.3 | Set permissions on /etc/shadow"
+  ansible.builtin.file:
+    path: /etc/shadow
+    owner: root
+    group: "{{ (ansible_os_family == 'RedHat') | ternary('root', 'shadow') }}"
+    mode: "0640"
+  when: "'6.1.3' not in cis_skip_rules"
+
+- name: "6.1.4 | Set permissions on /etc/group"
+  ansible.builtin.file:
+    path: /etc/group
+    owner: root
+    group: root
+    mode: "0644"
+  when: "'6.1.4' not in cis_skip_rules"
+
+- name: "6.1.5 | Set permissions on /etc/gshadow"
+  ansible.builtin.file:
+    path: /etc/gshadow
+    owner: root
+    group: "{{ (ansible_os_family == 'RedHat') | ternary('root', 'shadow') }}"
+    mode: "0640"
+  when: "'6.1.5' not in cis_skip_rules"
+
+# ── WORLD-WRITABLE FILES ────────────────────────────
+
+- name: "6.1.10 | Find world-writable files"
+  ansible.builtin.shell: >
+    find / -xdev -type f -perm -0002 -not -path '/proc/*' -not -path '/sys/*' 2>/dev/null
+  register: world_writable_files
+  changed_when: false
+  when:
+    - cis_level >= 2
+    - "'6.1.10' not in cis_skip_rules"
+
+- name: "6.1.10 | Report world-writable files"
+  ansible.builtin.debug:
+    msg: "WARNING: World-writable files found: {{ world_writable_files.stdout_lines }}"
+  when:
+    - world_writable_files is defined
+    - world_writable_files.stdout_lines | default([]) | length > 0
+
+# ── STICKY BIT ON WORLD-WRITABLE DIRS ───────────────
+
+- name: "6.1.11 | Find world-writable dirs without sticky bit"
+  ansible.builtin.shell: >
+    find / -xdev -type d \( -perm -0002 -a ! -perm -1000 \) -not -path '/proc/*' -not -path '/sys/*' 2>/dev/null
+  register: sticky_bit_dirs
+  changed_when: false
+  when: "'6.1.11' not in cis_skip_rules"
+
+- name: "6.1.11 | Set sticky bit on world-writable directories"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    mode: "a+t"
+  loop: "{{ sticky_bit_dirs.stdout_lines | default([]) }}"
+  when:
+    - "'6.1.11' not in cis_skip_rules"
+    - sticky_bit_dirs.stdout_lines | default([]) | length > 0
+
+# ── BANNER ───────────────────────────────────────────
+
+- name: "1.7.1 | Set warning banner (/etc/issue)"
+  ansible.builtin.copy:
+    content: |
+      ═══════════════════════════════════════════════════
+      AUTHORIZED ACCESS ONLY
+      This system is for authorized use only. All activity
+      is monitored and logged. Unauthorized access will be
+      prosecuted to the fullest extent of the law.
+      ═══════════════════════════════════════════════════
+    dest: /etc/issue
+    owner: root
+    group: root
+    mode: "0644"
+  when: "'1.7.1' not in cis_skip_rules"
+
+- name: "1.7.1 | Set warning banner (/etc/issue.net)"
+  ansible.builtin.copy:
+    content: "Authorized access only. All activity is monitored and logged."
+    dest: /etc/issue.net
+    owner: root
+    group: root
+    mode: "0644"
+  when: "'1.7.1' not in cis_skip_rules"

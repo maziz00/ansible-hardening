@@ -1,0 +1,37 @@
+---
+# ─────────────────────────────────────────────────────
+# Role: ssh-hardening
+# CIS Controls: 5.2.x — SSH server hardening
+# Supports: RHEL, CentOS, Rocky, Ubuntu, Debian
+# ─────────────────────────────────────────────────────
+
+- name: "5.2 | Backup original sshd_config"
+  ansible.builtin.copy:
+    src: "{{ cis_sshd_config_path }}"
+    dest: "/etc/ansible-backup/sshd_config.{{ ansible_date_time.epoch }}"
+    remote_src: true
+    mode: "0600"
+
+- name: "5.2 | Deploy hardened sshd_config"
+  ansible.builtin.template:
+    src: sshd_config.j2
+    dest: "{{ cis_sshd_config_path }}"
+    owner: root
+    group: root
+    mode: "0600"
+    validate: "sshd -t -f %s"
+  notify: restart sshd
+
+- name: "5.2.1 | Set permissions on sshd_config"
+  ansible.builtin.file:
+    path: "{{ cis_sshd_config_path }}"
+    owner: root
+    group: root
+    mode: "0600"
+  when: "'5.2.1' not in cis_skip_rules"
+
+- name: "5.2.x | Ensure SSH service is running"
+  ansible.builtin.service:
+    name: "{{ (ansible_os_family == 'RedHat') | ternary('sshd', 'ssh') }}"
+    state: started
+    enabled: true

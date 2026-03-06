@@ -1,0 +1,8 @@
+# Managed by Ansible — CIS Hardening
+# {{ ansible_managed }}
+
+deny = {{ cis_account_lockout_attempts }}
+unlock_time = {{ cis_account_lockout_time }}
+fail_interval = 900
+even_deny_root
+root_unlock_time = {{ cis_account_lockout_time }}

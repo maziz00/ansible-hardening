@@ -1,0 +1,180 @@
+---
+# ─────────────────────────────────────────────────────
+# Role: os-baseline
+# CIS Controls: 1.x, 3.x — Kernel params, services, packages
+# Supports: RHEL 8/9, CentOS, Rocky, Ubuntu 22/24, Debian 11/12
+# ─────────────────────────────────────────────────────
+
+- name: Include OS-specific variables
+  ansible.builtin.include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_distribution | lower }}-{{ ansible_distribution_major_version }}.yml"
+    - "{{ ansible_os_family | lower }}.yml"
+    - "default.yml"
+  ignore_errors: true
+
+# ── KERNEL PARAMETERS (sysctl) ───────────────────────
+
+- name: "3.1.1 | Disable IP forwarding"
+  ansible.posix.sysctl:
+    name: net.ipv4.ip_forward
+    value: "{{ cis_sysctl_ip_forward }}"
+    sysctl_set: true
+    state: present
+    reload: true
+  when: "'3.1.1' not in cis_skip_rules"
+
+- name: "3.1.2 | Disable ICMP redirects"
+  ansible.posix.sysctl:
+    name: "{{ item }}"
+    value: "{{ cis_sysctl_icmp_redirect }}"
+    sysctl_set: true
+    state: present
+    reload: true
+  loop:
+    - net.ipv4.conf.all.accept_redirects
+    - net.ipv4.conf.default.accept_redirects
+    - net.ipv6.conf.all.accept_redirects
+    - net.ipv6.conf.default.accept_redirects
+  when: "'3.1.2' not in cis_skip_rules"
+
+- name: "3.1.2 | Disable send redirects"
+  ansible.posix.sysctl:
+    name: "{{ item }}"
+    value: "{{ cis_sysctl_send_redirects }}"
+    sysctl_set: true
+    state: present
+    reload: true
+  loop:
+    - net.ipv4.conf.all.send_redirects
+    - net.ipv4.conf.default.send_redirects
+  when: "'3.1.2' not in cis_skip_rules"
+
+- name: "3.1.3 | Disable source routing"
+  ansible.posix.sysctl:
+    name: "{{ item }}"
+    value: "{{ cis_sysctl_accept_source_route }}"
+    sysctl_set: true
+    state: present
+    reload: true
+  loop:
+    - net.ipv4.conf.all.accept_source_route
+    - net.ipv4.conf.default.accept_source_route
+    - net.ipv6.conf.all.accept_source_route
+    - net.ipv6.conf.default.accept_source_route
+  when: "'3.1.3' not in cis_skip_rules"
+
+- name: "3.2.4 | Enable TCP SYN cookies"
+  ansible.posix.sysctl:
+    name: net.ipv4.tcp_syncookies
+    value: "{{ cis_sysctl_tcp_syncookies }}"
+    sysctl_set: true
+    state: present
+    reload: true
+  when: "'3.2.4' not in cis_skip_rules"
+
+- name: "3.2.7 | Log martian packets"
+  ansible.posix.sysctl:
+    name: "{{ item }}"
+    value: "{{ cis_sysctl_log_martians }}"
+    sysctl_set: true
+    state: present
+    reload: true
+  loop:
+    - net.ipv4.conf.all.log_martians
+    - net.ipv4.conf.default.log_martians
+  when: "'3.2.7' not in cis_skip_rules"
+
+- name: "1.5.3 | Enable ASLR"
+  ansible.posix.sysctl:
+    name: kernel.randomize_va_space
+    value: "{{ cis_sysctl_randomize_va_space }}"
+    sysctl_set: true
+    state: present
+    reload: true
+  when: "'1.5.3' not in cis_skip_rules"
+
+# ── DISABLE UNUSED SERVICES ─────────────────────────
+
+- name: "2.2.x | Disable unnecessary services"
+  ansible.builtin.service:
+    name: "{{ item }}"
+    state: stopped
+    enabled: false
+  loop: "{{ cis_disabled_services }}"
+  failed_when: false
+  when: "'2.2' not in cis_skip_rules"
+
+# ── REMOVE UNNECESSARY PACKAGES ─────────────────────
+
+- name: "2.3.x | Remove legacy packages (RedHat)"
+  ansible.builtin.dnf:
+    name: "{{ cis_remove_packages_redhat }}"
+    state: absent
+  when:
+    - ansible_os_family == 'RedHat'
+    - "'2.3' not in cis_skip_rules"
+
+- name: "2.3.x | Remove legacy packages (Debian/Ubuntu)"
+  ansible.builtin.apt:
+    name: "{{ cis_remove_packages_debian }}"
+    state: absent
+    purge: true
+  when:
+    - ansible_os_family == 'Debian'
+    - "'2.3' not in cis_skip_rules"
+
+# ── NTP CONFIGURATION ───────────────────────────────
+
+- name: "2.1.1 | Configure NTP (RedHat — chronyd)"
+  ansible.builtin.template:
+    src: chrony.conf.j2
+    dest: /etc/chrony.conf
+    owner: root
+    group: root
+    mode: "0644"
+    backup: true
+  notify: restart chronyd
+  when:
+    - ansible_os_family == 'RedHat'
+    - "'2.1.1' not in cis_skip_rules"
+
+- name: "2.1.1 | Configure NTP (Debian/Ubuntu — chrony)"
+  ansible.builtin.template:
+    src: chrony.conf.j2
+    dest: /etc/chrony/chrony.conf
+    owner: root
+    group: root
+    mode: "0644"
+    backup: true
+  notify: restart chrony
+  when:
+    - ansible_os_family == 'Debian'
+    - "'2.1.1' not in cis_skip_rules"
+
+- name: "2.1.1 | Ensure NTP service is running"
+  ansible.builtin.service:
+    name: "{{ (ansible_os_family == 'RedHat') | ternary(cis_ntp_service_redhat, cis_ntp_service_debian) }}"
+    state: started
+    enabled: true
+  when: "'2.1.1' not in cis_skip_rules"
+
+# ── SECURITY UPDATES ────────────────────────────────
+
+- name: "1.9 | Install security updates (RedHat)"
+  ansible.builtin.dnf:
+    name: "*"
+    state: latest
+    security: true
+  when:
+    - ansible_os_family == 'RedHat'
+    - "'1.9' not in cis_skip_rules"
+
+- name: "1.9 | Install security updates (Debian/Ubuntu)"
+  ansible.builtin.apt:
+    upgrade: safe
+    update_cache: true
+    cache_valid_time: 3600
+  when:
+    - ansible_os_family == 'Debian'
+    - "'1.9' not in cis_skip_rules"

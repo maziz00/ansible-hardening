@@ -1,0 +1,14 @@
+---
+- name: restart auditd
+  ansible.builtin.service:
+    name: auditd
+    state: restarted
+  # auditd on RHEL requires 'service' command, not systemctl
+  when: ansible_os_family == 'RedHat'
+
+- name: restart auditd
+  ansible.builtin.service:
+    name: auditd
+    state: restarted
+  when: ansible_os_family == 'Debian'
+  listen: restart auditd

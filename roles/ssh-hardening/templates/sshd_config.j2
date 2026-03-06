@@ -1,0 +1,48 @@
+# Managed by Ansible — CIS Hardening
+# {{ ansible_managed }}
+# DO NOT EDIT MANUALLY — changes will be overwritten
+
+# ── PROTOCOL & AUTHENTICATION ────────────────────────
+Protocol 2
+PermitRootLogin {{ cis_sshd_permit_root_login }}
+PasswordAuthentication {{ cis_sshd_password_auth }}
+PermitEmptyPasswords {{ cis_sshd_permit_empty_passwords }}
+PubkeyAuthentication yes
+MaxAuthTries {{ cis_sshd_max_auth_tries }}
+LoginGraceTime {{ cis_sshd_login_grace_time }}
+
+# ── ACCESS CONTROL ───────────────────────────────────
+{% if cis_sshd_allow_groups | length > 0 %}
+AllowGroups {{ cis_sshd_allow_groups | join(' ') }}
+{% endif %}
+
+# ── SESSION ──────────────────────────────────────────
+ClientAliveInterval {{ cis_sshd_client_alive_interval }}
+ClientAliveCountMax {{ cis_sshd_client_alive_count_max }}
+MaxSessions {{ cis_sshd_max_sessions }}
+
+# ── FORWARDING ───────────────────────────────────────
+X11Forwarding {{ cis_sshd_x11_forwarding }}
+AllowTcpForwarding {{ cis_sshd_allow_tcp_forwarding }}
+AllowAgentForwarding no
+
+# ── CRYPTO ───────────────────────────────────────────
+Ciphers {{ cis_sshd_ciphers }}
+MACs {{ cis_sshd_macs }}
+KexAlgorithms {{ cis_sshd_kex_algorithms }}
+HostKeyAlgorithms ssh-ed25519,rsa-sha2-512,rsa-sha2-256
+
+# ── LOGGING ──────────────────────────────────────────
+LogLevel {{ cis_sshd_log_level }}
+SyslogFacility AUTH
+
+# ── BANNER ───────────────────────────────────────────
+Banner /etc/issue.net
+
+# ── MISC ─────────────────────────────────────────────
+UsePAM yes
+PrintMotd no
+AcceptEnv LANG LC_*
+
+# SFTP
+Subsystem sftp /usr/libexec/openssh/sftp-server
