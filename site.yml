@@ -1,0 +1,56 @@
+---
+# ─────────────────────────────────────────────────────
+# CIS Hardening — Main Playbook
+# Applies all hardening roles to target hosts
+#
+# Usage:
+#   ansible-playbook site.yml -i inventory/production.ini --check --diff
+#   ansible-playbook site.yml -i inventory/production.ini
+#   ansible-playbook site.yml -i inventory/production.ini --tags ssh-hardening
+# ─────────────────────────────────────────────────────
+
+- name: CIS Benchmark Hardening
+  hosts: all
+  become: true
+
+  pre_tasks:
+    - name: Display target OS information
+      ansible.builtin.debug:
+        msg: "Hardening {{ ansible_distribution }} {{ ansible_distribution_version }} ({{ ansible_os_family }})"
+
+    - name: Validate supported OS
+      ansible.builtin.assert:
+        that:
+          - ansible_os_family in ['RedHat', 'Debian']
+          - (ansible_os_family == 'RedHat' and ansible_distribution_major_version | int >= 8) or
+            (ansible_distribution == 'Ubuntu' and ansible_distribution_version is version('22.04', '>=')) or
+            (ansible_distribution == 'Debian' and ansible_distribution_major_version | int >= 11)
+        fail_msg: "Unsupported OS: {{ ansible_distribution }} {{ ansible_distribution_version }}"
+
+    - name: Create backup directory for original configs
+      ansible.builtin.file:
+        path: /etc/ansible-backup
+        state: directory
+        mode: "0700"
+
+  roles:
+    - role: os-baseline
+      tags: [os-baseline, baseline]
+    - role: filesystem
+      tags: [filesystem, fs]
+    - role: ssh-hardening
+      tags: [ssh-hardening, ssh]
+    - role: firewall
+      tags: [firewall, fw]
+    - role: audit-logging
+      tags: [audit-logging, audit]
+    - role: user-access
+      tags: [user-access, users]
+
+  post_tasks:
+    - name: Hardening complete
+      ansible.builtin.debug:
+        msg: >
+          CIS Level {{ cis_level }} hardening applied to {{ ansible_hostname }}.
+          Skipped rules: {{ cis_skip_rules | default([]) | join(', ') | default('none') }}.
+          Run verify.yml to generate compliance report.

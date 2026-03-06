@@ -1,0 +1,70 @@
+---
+# ─────────────────────────────────────────────────────
+# CIS → MENA Compliance Framework Mapping
+# Maps CIS Benchmark controls to regional requirements
+# ─────────────────────────────────────────────────────
+
+frameworks:
+  NESA:
+    name: "UAE National Electronic Security Authority"
+    description: "Information assurance standards for UAE entities"
+    mappings:
+      - cis: "5.2.x"
+        nesa: "T2.2 — Access Control"
+        description: "SSH hardening maps to NESA access control requirements"
+      - cis: "4.1.x"
+        nesa: "T5.1 — Audit Logging"
+        description: "Audit logging maps to NESA monitoring requirements"
+      - cis: "1.1.x"
+        nesa: "T3.3 — System Hardening"
+        description: "Filesystem hardening maps to NESA baseline security"
+      - cis: "3.5.x"
+        nesa: "T4.1 — Network Security"
+        description: "Firewall rules map to NESA network perimeter controls"
+
+  NCA:
+    name: "Saudi National Cybersecurity Authority"
+    description: "Essential Cybersecurity Controls (ECC)"
+    mappings:
+      - cis: "5.4.x"
+        nca: "ECC 2-2 — Identity and Access Management"
+        description: "Password policies map to NCA identity controls"
+      - cis: "4.1.x"
+        nca: "ECC 2-8 — Event Logs and Monitoring"
+        description: "Auditd configuration maps to NCA logging requirements"
+      - cis: "5.2.x"
+        nca: "ECC 2-3 — Information System Security"
+        description: "SSH hardening maps to NCA system security controls"
+      - cis: "3.5.x"
+        nca: "ECC 2-5 — Network Security Management"
+        description: "Firewall rules map to NCA network controls"
+
+  PDPL:
+    name: "Saudi Personal Data Protection Law"
+    description: "Data handling requirements on servers processing personal data"
+    mappings:
+      - cis: "4.1.x"
+        pdpl: "Article 19 — Data Processing Records"
+        description: "Audit trails for data access compliance"
+      - cis: "5.2.x, 5.4.x"
+        pdpl: "Article 29 — Security Measures"
+        description: "Access controls for systems handling personal data"
+      - cis: "1.1.x"
+        pdpl: "Article 29 — Security Measures"
+        description: "Filesystem permissions for data-at-rest protection"
+
+  CBUAE:
+    name: "Central Bank of the UAE"
+    description: "Banking infrastructure security baseline"
+    mappings:
+      - cis: "ALL"
+        cbuae: "CBUAE IRAP — Infrastructure Security"
+        description: "Full CIS Level 2 recommended for banking systems"
+
+  SAMA:
+    name: "Saudi Arabian Monetary Authority"
+    description: "Financial sector cybersecurity framework"
+    mappings:
+      - cis: "ALL"
+        sama: "SAMA CSF — Cyber Security Framework"
+        description: "Full CIS Level 2 recommended for financial systems"

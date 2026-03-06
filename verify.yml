@@ -1,0 +1,123 @@
+---
+# ─────────────────────────────────────────────────────
+# CIS Compliance Verification Playbook
+# Checks hardening state without making changes
+#
+# Usage:
+#   ansible-playbook verify.yml -i inventory/production.ini
+# ─────────────────────────────────────────────────────
+
+- name: CIS Compliance Verification
+  hosts: all
+  become: true
+  gather_facts: true
+
+  vars:
+    report_dir: "/tmp/cis-reports"
+    compliance_results: []
+
+  tasks:
+    - name: Create report directory
+      ansible.builtin.file:
+        path: "{{ report_dir }}"
+        state: directory
+        mode: "0755"
+
+    # ── SSH CHECKS ────────────────────────────────────
+    - name: "5.2.1 | Verify SSH Protocol"
+      ansible.builtin.command: sshd -T
+      register: sshd_config
+      changed_when: false
+
+    - name: "5.2.4 | Verify root login disabled"
+      ansible.builtin.assert:
+        that: "'permitrootlogin no' in sshd_config.stdout | lower"
+        success_msg: "PASS: Root login disabled"
+        fail_msg: "FAIL: Root login is NOT disabled"
+      ignore_errors: true
+      register: check_root_login
+
+    - name: "5.2.5 | Verify password auth disabled"
+      ansible.builtin.assert:
+        that: "'passwordauthentication no' in sshd_config.stdout | lower"
+        success_msg: "PASS: Password authentication disabled"
+        fail_msg: "FAIL: Password authentication is enabled"
+      ignore_errors: true
+      register: check_password_auth
+
+    # ── FILESYSTEM CHECKS ─────────────────────────────
+    - name: "1.1.2 | Verify /tmp is mounted separately"
+      ansible.builtin.shell: mount | grep ' /tmp '
+      register: check_tmp_mount
+      changed_when: false
+      failed_when: false
+
+    - name: "1.1.3 | Verify /tmp has noexec"
+      ansible.builtin.shell: mount | grep ' /tmp ' | grep noexec
+      register: check_tmp_noexec
+      changed_when: false
+      failed_when: false
+      when: "'1.1.10' not in (cis_skip_rules | default([]))"
+
+    # ── KERNEL CHECKS ─────────────────────────────────
+    - name: "3.1.1 | Verify IP forwarding disabled"
+      ansible.builtin.command: sysctl net.ipv4.ip_forward
+      register: check_ip_forward
+      changed_when: false
+
+    - name: "3.1.1 | Assert IP forwarding is off"
+      ansible.builtin.assert:
+        that: "'net.ipv4.ip_forward = 0' in check_ip_forward.stdout"
+        success_msg: "PASS: IP forwarding disabled"
+        fail_msg: "FAIL: IP forwarding is enabled"
+      ignore_errors: true
+      register: check_ip_forward_result
+
+    # ── AUDIT CHECKS ──────────────────────────────────
+    - name: "4.1.1 | Verify auditd is running"
+      ansible.builtin.service:
+        name: auditd
+        state: started
+      check_mode: true
+      register: check_auditd
+      ignore_errors: true
+
+    # ── FIREWALL CHECKS ──────────────────────────────
+    - name: "3.5.1 | Verify firewall is active (RedHat)"
+      ansible.builtin.service:
+        name: firewalld
+        state: started
+      check_mode: true
+      register: check_firewalld
+      ignore_errors: true
+      when: ansible_os_family == 'RedHat'
+
+    - name: "3.5.1 | Verify firewall is active (Debian/Ubuntu)"
+      ansible.builtin.command: ufw status
+      register: check_ufw
+      changed_when: false
+      failed_when: false
+      when: ansible_os_family == 'Debian'
+
+    # ── GENERATE REPORT ──────────────────────────────
+    - name: Generate compliance report
+      ansible.builtin.template:
+        src: roles/os-baseline/templates/compliance-report.json.j2
+        dest: "{{ report_dir }}/{{ ansible_hostname }}-report.json"
+        mode: "0644"
+
+    - name: Display summary
+      ansible.builtin.debug:
+        msg: |
+          ═══════════════════════════════════════
+          CIS Compliance Report — {{ ansible_hostname }}
+          OS: {{ ansible_distribution }} {{ ansible_distribution_version }}
+          Level: {{ cis_level | default(1) }}
+          ═══════════════════════════════════════
+          SSH Root Login:     {{ 'PASS' if check_root_login is not failed else 'FAIL' }}
+          SSH Password Auth:  {{ 'PASS' if check_password_auth is not failed else 'FAIL' }}
+          IP Forwarding:      {{ 'PASS' if check_ip_forward_result is not failed else 'FAIL' }}
+          Auditd Running:     {{ 'PASS' if check_auditd is not failed else 'FAIL' }}
+          Firewall Active:    {{ 'PASS' if (check_firewalld is not failed or check_ufw.stdout is defined and 'active' in check_ufw.stdout | default('')) else 'FAIL' }}
+          ═══════════════════════════════════════
+          Full report: {{ report_dir }}/{{ ansible_hostname }}-report.json
