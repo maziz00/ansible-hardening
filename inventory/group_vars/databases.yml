@@ -1,0 +1,17 @@
+---
+# ─────────────────────────────────────────────────────
+# Database Servers — stricter hardening
+# ─────────────────────────────────────────────────────
+
+# Only SSH — no HTTP/HTTPS
+cis_firewall_allowed_services:
+  - ssh
+
+cis_ufw_allowed_ports:
+  - { port: 22, proto: tcp }
+
+# CIS Level 2 for database servers
+cis_level: 2
+
+# Shorter password rotation for DB servers
+cis_password_max_days: 90

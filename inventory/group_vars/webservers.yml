@@ -1,0 +1,17 @@
+---
+# ─────────────────────────────────────────────────────
+# Web Servers — override defaults
+# ─────────────────────────────────────────────────────
+
+cis_firewall_allowed_services:
+  - ssh
+  - http
+  - https
+
+cis_ufw_allowed_ports:
+  - { port: 22, proto: tcp }
+  - { port: 80, proto: tcp }
+  - { port: 443, proto: tcp }
+
+# Web servers may need higher session limits
+cis_sshd_max_sessions: 4

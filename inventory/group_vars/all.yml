@@ -1,0 +1,110 @@
+---
+# ─────────────────────────────────────────────────────
+# Global Hardening Defaults — All Hosts
+# CIS Benchmark Level 1 + Level 2 controls
+# ─────────────────────────────────────────────────────
+
+# CIS Level: 1 = Level 1 only, 2 = Level 1 + Level 2
+cis_level: 1
+
+# ── OS BASELINE ──────────────────────────────────────
+# Kernel parameters (sysctl)
+cis_sysctl_ip_forward: 0
+cis_sysctl_icmp_redirect: 0
+cis_sysctl_send_redirects: 0
+cis_sysctl_accept_source_route: 0
+cis_sysctl_log_martians: 1
+cis_sysctl_tcp_syncookies: 1
+cis_sysctl_randomize_va_space: 2
+
+# NTP
+cis_ntp_servers:
+  - 0.pool.ntp.org
+  - 1.pool.ntp.org
+  - 2.pool.ntp.org
+
+# Services to disable
+cis_disabled_services:
+  - avahi-daemon
+  - cups
+  - rpcbind
+  - nfs-server
+
+# Packages to remove
+cis_remove_packages_redhat:
+  - xorg-x11-server-Xorg
+  - mcstrans
+  - telnet
+  - rsh
+  - ypserv
+  - tftp-server
+cis_remove_packages_debian:
+  - xserver-xorg
+  - telnet
+  - rsh-client
+  - nis
+  - tftpd
+
+# ── SSH HARDENING ────────────────────────────────────
+cis_sshd_permit_root_login: "no"
+cis_sshd_password_auth: "no"
+cis_sshd_permit_empty_passwords: "no"
+cis_sshd_max_auth_tries: 4
+cis_sshd_client_alive_interval: 300
+cis_sshd_client_alive_count_max: 0
+cis_sshd_login_grace_time: 60
+cis_sshd_allow_groups: ["sshusers"]
+cis_sshd_log_level: "VERBOSE"
+cis_sshd_max_sessions: 10
+cis_sshd_x11_forwarding: "no"
+cis_sshd_allow_tcp_forwarding: "no"
+cis_sshd_ciphers: "aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr"
+cis_sshd_macs: "hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,hmac-sha2-512,hmac-sha2-256"
+cis_sshd_kex_algorithms: "curve25519-sha256,diffie-hellman-group16-sha512,diffie-hellman-group18-sha512"
+
+# ── FIREWALL ─────────────────────────────────────────
+cis_firewall_default_zone: drop
+cis_firewall_allowed_services:
+  - ssh
+  - https
+
+# UFW defaults (Ubuntu/Debian)
+cis_ufw_default_incoming: deny
+cis_ufw_default_outgoing: allow
+cis_ufw_allowed_ports:
+  - { port: 22, proto: tcp }
+  - { port: 443, proto: tcp }
+
+# ── AUDIT LOGGING ────────────────────────────────────
+cis_auditd_max_log_file: 8
+cis_auditd_max_log_file_action: keep_logs
+cis_auditd_space_left_action: email
+cis_auditd_admin_space_left_action: halt
+cis_auditd_action_mail_acct: root
+
+# ── USER ACCESS ──────────────────────────────────────
+cis_password_max_days: 365
+cis_password_min_days: 7
+cis_password_min_length: 14
+cis_password_warn_age: 7
+cis_password_remember: 5
+cis_account_lockout_attempts: 5
+cis_account_lockout_time: 900
+cis_umask: "027"
+cis_shell_timeout: 900
+
+# ── FILESYSTEM ───────────────────────────────────────
+cis_tmp_mount_options: "nodev,nosuid,noexec"
+cis_var_tmp_mount_options: "nodev,nosuid,noexec"
+cis_dev_shm_mount_options: "nodev,nosuid,noexec"
+cis_home_mount_options: "nodev"
+cis_disable_usb_storage: true
+cis_disable_cramfs: true
+cis_disable_squashfs: true
+
+# ── SKIP RULES ───────────────────────────────────────
+# Add CIS control IDs here to skip them
+cis_skip_rules: []
+  # - "1.1.10"   # Skip /tmp noexec (breaks some build tools)
+  # - "5.2.18"   # Skip SSH MaxSessions limit (need tunneling)
+  # - "3.5.3"    # Skip iptables flush (managed externally)
