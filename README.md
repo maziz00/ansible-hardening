@@ -247,7 +247,7 @@ ansible-hardening/
 **Mohamed AbdelAziz** — Senior DevOps Architect
 12 years securing enterprise Linux infrastructure from bare-metal racks to cloud VMs.
 
-- [LinkedIn](https://www.linkedin.com/in/maziz00/) | [Medium](https://medium.com/@maziz00) | [Upwork](https://www.upwork.com/freelancers/maziz00)
+- [LinkedIn](https://www.linkedin.com/in/maziz00/) | [Medium](https://medium.com/@maziz00) | [Upwork](https://www.upwork.com/freelancers/maziz00) | [Consulting](https://calendly.com/maziz00/devops)
 
 ---
 
