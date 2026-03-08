@@ -178,10 +178,10 @@ ansible-playbook verify.yml -i inventory/production.ini
 
 These playbooks are aligned with requirements from:
 
-- **UAE NESA** (National Electronic Security Authority) — information assurance standards
-- **Saudi NCA** (National Cybersecurity Authority) — Essential Cybersecurity Controls
-- **PDPL** (Personal Data Protection Law) — data handling on servers
-- **Banking regulators** (CBUAE, SAMA) — infrastructure security baselines
+- **UAE NESA** (National Electronic Security Authority) information assurance standards
+- **Saudi NCA** (National Cybersecurity Authority) Essential Cybersecurity Controls
+- **PDPL** (Personal Data Protection Law) data handling on servers
+- **Banking regulators** (CBUAE, SAMA) infrastructure security baselines
 
 The CIS benchmark covers the technical controls. These playbooks map CIS rules to local compliance frameworks through the `compliance-mapping.yml` reference.
 
