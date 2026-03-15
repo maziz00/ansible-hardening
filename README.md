@@ -242,7 +242,7 @@ ansible-hardening/
 
 ---
 
-## Author
+## About Me
 
 **Mohamed AbdelAziz** — Senior DevOps Architect
 12 years securing enterprise Linux infrastructure from bare-metal racks to cloud VMs.
